@@ -1,0 +1,51 @@
+import numpy as np
+# 模拟不同参与方的模型更新
+model_updates = {
+    'participant_1': np.array([0.5, 0.3, 0.2]),
+    'participant_2': np.array([0.4, 0.4, 0.2]),
+    'participant_3': np.array([0.6, 0.2, 0.2]),
+    'malicious_participant': np.array([10.0, 10.0, 10.0])  # 恶意更新
+}
+
+# 检测潜在恶意更新的函数
+def detect_malicious_updates(updates, threshold=5.0):
+    detected = {}
+    for participant, update in updates.items():
+        if np.linalg.norm(update) > threshold:
+            detected[participant] = True
+        else:
+            detected[participant] = False
+    return detected
+
+# 使用博弈论方法计算权重的函数
+def calculate_weights(updates, detected_malicious):
+    weights = {}
+    for participant, update in updates.items():
+        if detected_malicious[participant]:
+            weights[participant] = 0  # 对检测到的恶意更新赋予零权重
+        else:
+            norm = np.linalg.norm(update)
+            weights[participant] = 1 / (norm + 1e-5)  # 取范数的倒数
+    return weights
+
+# 检测恶意更新
+detected_malicious = detect_malicious_updates(model_updates)
+
+# 计算权重
+weights = calculate_weights(model_updates, detected_malicious)
+
+# 归一化权重
+total_weight = sum(weights.values())
+normalized_weights = {k: v / total_weight for k, v in weights.items()}
+
+# 执行加权聚合的函数
+def weighted_aggregation(updates, weights):
+    aggregated_model = np.zeros_like(next(iter(updates.values())))
+    for participant, update in updates.items():
+        aggregated_model += weights[participant] * update
+    return aggregated_model
+
+# 执行加权聚合
+aggregated_model = weighted_aggregation(model_updates, normalized_weights)
+
+print("聚合后的模型:", aggregated_model)
